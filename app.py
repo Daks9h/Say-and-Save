@@ -39,7 +39,7 @@ try:
 except Exception:
     pass
 
-app = FastAPI(title="Dukaan Diary API", version="1.0.0")
+app = FastAPI(title="Say & Save API", version="1.0.0")
 
 # Enable CORS for Next.js frontend
 app.add_middleware(
