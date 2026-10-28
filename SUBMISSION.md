@@ -134,3 +134,4 @@ By building Dukaan Diary around **local-first open weights (Gemma 4)**:
 - **WhatsApp Invoice Integration:** Automatically send bill summaries over WhatsApp Web.
 - **Regional Languages:** Fine-tune local Gemma on Gujarati, Marathi, and Tamil voice vocabulary.
 - **Barcode & Camera Integration:** Optical scanning of prescription labels and garment tags.
+
