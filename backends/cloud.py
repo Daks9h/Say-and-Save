@@ -65,6 +65,90 @@ class CloudBackend(Backend):
         transcript = (resp.text or "").strip()
         return transcript, timings
 
+    def process_audio(
+        self,
+        wav_path: str,
+        shop_type: ShopType,
+        today: Optional[date] = None
+    ) -> Tuple[BaseCard, str, Dict[str, float], List[Dict[str, str]]]:
+        """Single-call audio-to-card extraction (Fastest path: ~3 seconds)."""
+        if today is None:
+            today = date.today()
+
+        timings: Dict[str, float] = {}
+
+        # 1. Normalize audio
+        with TimingContext("audio_prep", timings):
+            normalized_path = normalize_to_pcm16_wav(wav_path)
+            try:
+                with open(normalized_path, "rb") as f:
+                    audio_bytes = f.read()
+            finally:
+                if normalized_path != wav_path and os.path.exists(normalized_path):
+                    try:
+                        os.remove(normalized_path)
+                    except Exception:
+                        pass
+
+        # 2. Prepare single-call prompt with JSON schema
+        schema_dict = get_pack_schema(shop_type)
+        schema_json = json.dumps(schema_dict, indent=2)
+
+        prompt = f"""<role>
+You convert a shopkeeper's spoken voice note into one JSON card for a {shop_type.value} shop.
+</role>
+<rules>
+1. Output numbers as digits. "teen hazaar" is 3000.
+2. In the "notes" field, output the exact spoken transcript.
+3. If a value was not said, output null. Never guess values.
+4. Output only JSON matching the schema.
+</rules>
+<schema>
+{schema_json}
+</schema>
+"""
+
+        # 3. Single API Call (audio + prompt)
+        with TimingContext("cloud_api", timings):
+            resp = self.client.models.generate_content(
+                model=self.model,
+                contents=[
+                    types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav"),
+                    prompt
+                ],
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    max_output_tokens=1000,
+                    temperature=0.0
+                )
+            )
+
+        raw_text = (resp.text or "").strip()
+        parsed_dict = json.loads(raw_text)
+
+        transcript = parsed_dict.get("notes") or ""
+
+        # 4. Python post-processing (dates, math, validation)
+        model_cls = get_card_model(shop_type)
+        with TimingContext("python_validation", timings):
+            card = model_cls(**parsed_dict)
+            card.notes = transcript
+
+            card.balance_due = balance_due(card.amount, card.advance)
+            card.due_date, _ = compute_due_date(card.due_in_days, card.due_date_text, today)
+
+            if hasattr(card, "expiry") and getattr(card, "expiry"):
+                card.parsed_expiry_date, _ = parse_expiry(card.expiry)
+
+            warnings = validate_card(card, today)
+
+        if config.GROUNDING_CHECK and transcript:
+            with TimingContext("grounding_check", timings):
+                grounding_warns = self._check_grounding(card, transcript)
+                warnings.extend(grounding_warns)
+
+        return card, transcript, timings, warnings
+
     def extract(
         self,
         transcript: str,

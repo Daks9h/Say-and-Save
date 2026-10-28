@@ -38,7 +38,7 @@ export default function DukaanDiary() {
   const [shopType, setShopType] = useState("tailor");
   const [health, setHealth] = useState({});
   const [cloudConsent, setCloudConsent] = useState(true);
-  const [routerMode, setRouterMode] = useState("auto"); // auto, local, cloud
+  const [routerMode, setRouterMode] = useState("cloud"); // Default to Cloud Gemini for maximum speed
 
   // Recording & Input state
   const [isRecording, setIsRecording] = useState(false);

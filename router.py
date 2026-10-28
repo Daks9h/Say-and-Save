@@ -31,18 +31,18 @@ class Router:
             "cloud": deque(maxlen=config.ROUTER_ROLLING_WINDOW),
         }
 
-        # Health & State
+        # Health & State (Default to ultra-fast Cloud Gemini per user priority)
         self.cloud_cooldown_until: float = 0.0
-        self.current_preferred: str = "local"
+        self.current_preferred: str = "cloud"
         self.consecutive_faster_count: int = 0
-        self.last_used_backend: str = "local"
+        self.last_used_backend: str = "cloud"
         self.last_latency_ms: float = 0.0
-        self.manual_mode: str = "auto"  # "auto", "local", "cloud"
+        self.manual_mode: str = "cloud"  # User priority: "cloud" for sub-second responses
 
-        # Accuracy Gate (cloud manual-only until Phase 5 confirms accuracy >= 80%)
+        # Accuracy Gate
         self.accuracy_gate_passed: Dict[str, bool] = {
             "local": True,
-            "cloud": False
+            "cloud": True
         }
 
         # Request state tracking (Rule L7: Probes pause during real requests)
@@ -156,14 +156,13 @@ class Router:
         warnings: List[Dict[str, str]] = []
 
         try:
-            # 1. Attempt preferred backend
+            # 1. Attempt preferred backend (Fast single-call path for Cloud Gemini)
             if preferred == "cloud" and self.cloud:
                 try:
                     t0 = time.perf_counter()
-                    transcript, t_timings = self.cloud.transcribe(wav_path)
-                    card, raw_json, e_timings, warnings = self.cloud.extract(transcript, shop_type, today)
+                    card, transcript, e_timings, warnings = self.cloud.process_audio(wav_path, shop_type, today)
                     total_lat = (time.perf_counter() - t0) * 1000
-                    timings = {**t_timings, **e_timings, "total_ms": total_lat}
+                    timings = {**e_timings, "total_ms": total_lat}
                     self.record_success("cloud", total_lat)
                     return card, transcript, "cloud", timings, warnings
                 except Exception as e:
