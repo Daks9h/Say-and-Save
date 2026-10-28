@@ -95,13 +95,17 @@ class CloudBackend(Backend):
         schema_json = json.dumps(schema_dict, indent=2)
 
         prompt = f"""<role>
-You convert a shopkeeper's spoken voice note into one JSON card for a {shop_type.value} shop.
+You convert a shopkeeper's spoken voice note into one structured JSON card for a {shop_type.value} shop.
 </role>
 <rules>
-1. Output numbers as digits. "teen hazaar" is 3000.
-2. In the "notes" field, output the exact spoken transcript.
-3. If a value was not said, output null. Never guess values.
-4. Output only JSON matching the schema.
+1. ALL output string fields must be in clean English / Romanized Latin alphabet with proper capitalization. NEVER output Devanagari script.
+   Examples: "वर्मा अंकल" -> "Verma Uncle", "मीना मैडम" -> "Meena Madam", "सूट" -> "Suit", "ब्लाउज" -> "Blouse", "पैंट" -> "Pant", "दवा" -> "Medicine", "केक" -> "Cake".
+2. Convert all spoken numbers to standard numeric digits (e.g. "chattis" -> 36, "teen hazaar" -> 3000, "paanch sau" -> 500, "do kilo" -> 2).
+3. If the specific item or garment was not named, infer a clean English default for this {shop_type.value} shop (e.g. "Tailoring Service", "Medicine Order", "Custom Cake").
+4. In the "notes" field, output the complete spoken transcript in English / Roman script.
+5. For relative dates: "aaj" = 0, "kal" = 1, "parso" = 2, "N din mein" = N, "agle hafte" = 7 in "due_in_days".
+6. If a measurement or specific field was not mentioned, output null. Never invent measurements.
+7. Output strictly valid JSON matching the schema.
 </rules>
 <schema>
 {schema_json}

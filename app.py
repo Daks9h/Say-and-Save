@@ -103,10 +103,15 @@ def update_config(update: ConfigUpdate):
 async def process_audio(
     file: UploadFile = File(...),
     shop_type: str = Form("tailor"),
-    mode: Optional[str] = Form(None)
+    mode: Optional[str] = Form(None),
+    auto_save: bool = Form(True),
+    customer_email: Optional[str] = Form(None),
+    customer_phone: Optional[str] = Form(None),
+    send_email: bool = Form(False),
+    send_telegram: bool = Form(False),
 ):
-    """Takes uploaded audio, executes routing (transcription + structured extraction),
-    applies Python validation, and returns the proposed card with warnings and timing.
+    """Takes uploaded audio, executes routing (transcription + structured extraction in clean English),
+    applies Python validation, and automatically creates the flashcard in SQLite ledger when auto_save=True.
     """
     try:
         st = ShopType(shop_type.lower())
@@ -127,13 +132,43 @@ async def process_audio(
         card_dict = card.model_dump(mode="json")
         card_dict["needs_attention"] = needs_attention(card)
 
+        card_id = None
+        notifications_sent = {}
+
+        if auto_save:
+            card_id = db.save_card(
+                card_data=card_dict,
+                backend_used=backend_used,
+                used_cloud=(backend_used == "cloud"),
+                customer_email=customer_email,
+                customer_phone=customer_phone,
+            )
+            card_dict["id"] = card_id
+
+            if send_email and customer_email:
+                email_res = send_customer_email(customer_email, card_dict, shop_name=config.PROJECT_NAME)
+                notifications_sent["email"] = email_res
+
+            if send_telegram:
+                msg = f"<b>New {st.value.capitalize()} Order #{card_id}</b>\n" \
+                      f"Person: {card_dict.get('person')}\n" \
+                      f"Item: {card_dict.get('item')}\n" \
+                      f"Total: ₹{card_dict.get('amount')}, Advance: ₹{card_dict.get('advance')}\n" \
+                      f"Balance Due: ₹{card_dict.get('balance_due')}\n" \
+                      f"Due Date: {card_dict.get('due_date')}"
+                tg_res = send_telegram_alert(msg)
+                notifications_sent["telegram"] = tg_res
+
         return {
+            "status": "auto_saved" if auto_save else "extracted",
+            "card_id": card_id,
             "transcript": transcript,
             "backend_used": backend_used,
             "used_cloud": backend_used == "cloud",
             "card": card_dict,
             "warnings": warnings,
             "timings": timings,
+            "notifications": notifications_sent,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -233,6 +268,71 @@ def create_card(req: SaveCardRequest):
     return {
         "status": "saved",
         "card_id": card_id,
+        "notifications": notifications_sent
+    }
+
+
+@app.get("/cards/{card_id}")
+def get_card_endpoint(card_id: int):
+    c = db.get_card(card_id)
+    if not c:
+        raise HTTPException(status_code=404, detail="Card not found")
+    c_json = c.get("parsed_card", {})
+    try:
+        model_cls = get_card_model(c["shop_type"])
+        card_obj = model_cls(**c_json)
+        c["needs_attention"] = needs_attention(card_obj)
+    except Exception:
+        c["needs_attention"] = False
+    return c
+
+
+class UpdateCardRequest(BaseModel):
+    card: Dict[str, Any]
+    customer_email: Optional[str] = None
+    customer_phone: Optional[str] = None
+    send_email: bool = False
+    send_telegram: bool = False
+
+
+@app.put("/cards/{card_id}")
+def update_card_endpoint(card_id: int, req: UpdateCardRequest):
+    card_data = dict(req.card)
+    
+    # Python deterministic math for amounts
+    amt = float(card_data.get("amount") or 0.0)
+    adv = float(card_data.get("advance") or 0.0)
+    card_data["balance_due"] = balance_due(amt, adv)
+
+    if req.customer_email:
+        card_data["customer_email"] = req.customer_email
+    if req.customer_phone:
+        card_data["customer_phone"] = req.customer_phone
+
+    success = db.update_card(card_id, card_data)
+    if not success:
+        raise HTTPException(status_code=404, detail="Card not found")
+
+    notifications_sent = {}
+    if req.send_email and req.customer_email:
+        email_res = send_customer_email(req.customer_email, card_data, shop_name=config.PROJECT_NAME)
+        notifications_sent["email"] = email_res
+
+    if req.send_telegram:
+        msg = f"<b>Updated Order #{card_id}</b>\n" \
+              f"Person: {card_data.get('person')}\n" \
+              f"Item: {card_data.get('item')}\n" \
+              f"Total: ₹{card_data.get('amount')}, Advance: ₹{card_data.get('advance')}\n" \
+              f"Balance Due: ₹{card_data.get('balance_due')}\n" \
+              f"Due Date: {card_data.get('due_date')}"
+        tg_res = send_telegram_alert(msg)
+        notifications_sent["telegram"] = tg_res
+
+    updated_card = db.get_card(card_id)
+    return {
+        "status": "updated",
+        "card_id": card_id,
+        "card": updated_card.get("parsed_card", card_data),
         "notifications": notifications_sent
     }
 

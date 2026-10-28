@@ -63,3 +63,4 @@ warnings = validate_card(card)
 print("\nFinal Card:")
 print(json.dumps(card.model_dump(mode="json"), indent=2))
 print(f"Warnings ({len(warnings)}):", warnings)
+

@@ -56,8 +56,8 @@ def save_card(
     cursor = conn.cursor()
 
     shop_type = card_data.get("shop_type", "tailor")
-    person = card_data.get("person")
-    item = card_data.get("item")
+    person = card_data.get("person") or "Customer"
+    item = card_data.get("item") or f"{shop_type.capitalize()} Order"
     amount = float(card_data.get("amount") or 0.0)
     advance = float(card_data.get("advance") or 0.0)
     balance = float(card_data.get("balance_due") or (amount - advance))
@@ -84,6 +84,61 @@ def save_card(
     conn.commit()
     conn.close()
     return card_id
+
+
+def update_card(
+    card_id: int,
+    card_data: Dict[str, Any],
+    db_path: str = DB_PATH
+) -> bool:
+    """Updates an existing card's fields and card_json."""
+    conn = get_connection(db_path)
+    cursor = conn.cursor()
+
+    person = card_data.get("person")
+    item = card_data.get("item")
+    amount = float(card_data.get("amount") or 0.0)
+    advance = float(card_data.get("advance") or 0.0)
+    balance = float(card_data.get("balance_due") or (amount - advance))
+    due_date = card_data.get("due_date")
+    if isinstance(due_date, (date, datetime)):
+        due_date = due_date.isoformat()
+
+    notes = card_data.get("notes", "")
+    card_json_str = json.dumps(card_data, ensure_ascii=False)
+    customer_email = card_data.get("customer_email")
+    customer_phone = card_data.get("customer_phone")
+
+    cursor.execute("""
+        UPDATE cards SET
+            person = ?, item = ?, amount = ?, advance = ?,
+            balance_due = ?, due_date = ?, notes = ?, card_json = ?,
+            customer_email = COALESCE(?, customer_email),
+            customer_phone = COALESCE(?, customer_phone)
+        WHERE id = ?
+    """, (person, item, amount, advance, balance, due_date, notes, card_json_str, customer_email, customer_phone, card_id))
+
+    changed = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return changed
+
+
+def get_card(card_id: int, db_path: str = DB_PATH) -> Optional[Dict[str, Any]]:
+    """Retrieves a single card by ID."""
+    conn = get_connection(db_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM cards WHERE id = ?", (card_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    try:
+        d["parsed_card"] = json.loads(d["card_json"])
+    except Exception:
+        d["parsed_card"] = {}
+    return d
 
 
 def list_cards(
@@ -147,7 +202,6 @@ def delete_card(card_id: int, db_path: str = DB_PATH) -> bool:
 
 
 def list_people(shop_type: Optional[str] = None, db_path: str = DB_PATH) -> List[str]:
-    """Returns distinct customer names for auto-complete/fuzzy matching."""
     conn = get_connection(db_path)
     cursor = conn.cursor()
     if shop_type:
@@ -160,7 +214,6 @@ def list_people(shop_type: Optional[str] = None, db_path: str = DB_PATH) -> List
 
 
 def latest_card_for_person(person_name: str, shop_type: Optional[str] = None, db_path: str = DB_PATH) -> Optional[Dict[str, Any]]:
-    """Returns the latest card for a customer (e.g. for tailor 'use previous measurements')."""
     conn = get_connection(db_path)
     cursor = conn.cursor()
     if shop_type:
