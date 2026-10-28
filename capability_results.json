@@ -1,0 +1,98 @@
+{
+  "gemini-2.5-flash": {
+    "text": {
+      "tailor": {
+        "pass": false,
+        "latency_ms": 482.76039998745546,
+        "error": "404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.8-flash for the latest features and improvements. We recommend you to use the Interactions API (https://ai.google.dev/gemini-api/docs/get-started).', 'status': 'NOT_FOUND'}}"
+      },
+      "medical": {
+        "pass": false,
+        "latency_ms": 375.05090003833175,
+        "error": "404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.8-flash for the latest features and improvements. We recommend you to use the Interactions API (https://ai.google.dev/gemini-api/docs/get-started).', 'status': 'NOT_FOUND'}}"
+      },
+      "baker": {
+        "pass": false,
+        "latency_ms": 391.76420000148937,
+        "error": "404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.8-flash for the latest features and improvements. We recommend you to use the Interactions API (https://ai.google.dev/gemini-api/docs/get-started).', 'status': 'NOT_FOUND'}}"
+      }
+    },
+    "audio": {
+      "pass": false,
+      "latency_ms": 688.2471999851987,
+      "error": "404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.8-flash for the latest features and improvements. We recommend you to use the Interactions API (https://ai.google.dev/gemini-api/docs/get-started).', 'status': 'NOT_FOUND'}}"
+    }
+  },
+  "gemini-2.5-flash-lite": {
+    "text": {
+      "tailor": {
+        "pass": false,
+        "latency_ms": 385.91999997152016,
+        "error": "404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash-lite is no longer available to new users. Please update your code to use models/gemini-3.5-flash-lite for the latest features and improvements. We recommend you to use the Interactions API (https://ai.google.dev/gemini-api/docs/get-started).', 'status': 'NOT_FOUND'}}"
+      },
+      "medical": {
+        "pass": false,
+        "latency_ms": 408.8820000179112,
+        "error": "404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash-lite is no longer available to new users. Please update your code to use models/gemini-3.5-flash-lite for the latest features and improvements. We recommend you to use the Interactions API (https://ai.google.dev/gemini-api/docs/get-started).', 'status': 'NOT_FOUND'}}"
+      },
+      "baker": {
+        "pass": false,
+        "latency_ms": 383.5564999608323,
+        "error": "404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash-lite is no longer available to new users. Please update your code to use models/gemini-3.5-flash-lite for the latest features and improvements. We recommend you to use the Interactions API (https://ai.google.dev/gemini-api/docs/get-started).', 'status': 'NOT_FOUND'}}"
+      }
+    },
+    "audio": {
+      "pass": false,
+      "latency_ms": 564.481099951081,
+      "error": "404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash-lite is no longer available to new users. Please update your code to use models/gemini-3.5-flash-lite for the latest features and improvements. We recommend you to use the Interactions API (https://ai.google.dev/gemini-api/docs/get-started).', 'status': 'NOT_FOUND'}}"
+    }
+  },
+  "gemma-4-26b-a4b-it": {
+    "text": {
+      "tailor": {
+        "pass": true,
+        "latency_ms": 19852.56329999538,
+        "reply": "{\n  \"customer_name\": \"Meena madam\",\n  \"item\": \"blouse\",\n  \"measurements\": {\n    \"chest\": 36,\n    \"waist\": 30\n  },\n  \"delivery_time\": \"5 days\",\n  \"payment\": {\n    \"advance\": 500,\n    \"total\": 800\n  }\n}"
+      },
+      "medical": {
+        "pass": true,
+        "latency_ms": 14352.109599974938,
+        "reply": "{\n  \"medicine_name\": \"Crocin\",\n  \"batch_number\": \"A123\",\n  \"expiry_date\": \"08/2027\",\n  \"quantity\": \"20 units\"\n}"
+      },
+      "baker": {
+        "pass": true,
+        "latency_ms": 8612.983400002122,
+        "reply": "[\n  {\n    \"item\": \"Chocolate cake\",\n    \"quantity\": \"2 kg\",\n    \"delivery_deadline\": \"kal shaam tak\",\n    \"advance_payment\": 500,\n    \"customer_name\": \"Rahul\"\n  }\n]"
+      }
+    },
+    "audio": {
+      "pass": false,
+      "latency_ms": 1387.7829000120983,
+      "error": "400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Audio input modality is not enabled for this model', 'status': 'INVALID_ARGUMENT'}}"
+    }
+  },
+  "gemma-4-31b-it": {
+    "text": {
+      "tailor": {
+        "pass": true,
+        "latency_ms": 36316.06209999882,
+        "reply": "{\n  \"customer_name\": \"Meena madam\",\n  \"item\": \"blouse\",\n  \"measurements\": {\n    \"chest\": 36,\n    \"waist\": 30\n  },\n  \"delivery_time\": \"5 days\",\n  \"payment\": {\n    \"advance\": 500,\n    \"total\": 800,\n    \"balance_due\": 300\n  }\n}"
+      },
+      "medical": {
+        "pass": false,
+        "latency_ms": 31387.443399988115,
+        "error": "503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}"
+      },
+      "baker": {
+        "pass": false,
+        "latency_ms": 17532.900299993344,
+        "error": "500 INTERNAL. {'error': {'code': 500, 'message': 'Internal error encountered.', 'status': 'INTERNAL'}}"
+      }
+    },
+    "audio": {
+      "pass": false,
+      "latency_ms": 1533.335000043735,
+      "error": "400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Audio input modality is not enabled for this model', 'status': 'INVALID_ARGUMENT'}}"
+    }
+  }
+}

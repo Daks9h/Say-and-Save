@@ -1,0 +1,99 @@
+{
+  "tailor": [
+    {
+      "id": "T1",
+      "type": "normal_english",
+      "transcript": "Ramesh Kumar pant and shirt, chest 38, waist 32, shoulder 18, length 40, advance 500, total 1500, due in 5 days"
+    },
+    {
+      "id": "T2",
+      "type": "normal_hinglish",
+      "transcript": "Sunita bhabhi ka suit, chest 36, waist 30, advance 300, total 900, kal tak chahiye"
+    },
+    {
+      "id": "T3",
+      "type": "number_in_words",
+      "transcript": "Deepak bhai kurta, chest thirty four, waist thirty, advance do sau, total aath sau, parso delivery"
+    },
+    {
+      "id": "T4",
+      "type": "missing_field",
+      "transcript": "Anil uncle safari suit, total 2000, 3 din mein"
+    },
+    {
+      "id": "T5",
+      "type": "out_of_range",
+      "transcript": "Pooja madam lehenga, chest 85, waist 95, advance 1000, total 4000, 4 din mein"
+    },
+    {
+      "id": "T6",
+      "type": "full_advance",
+      "transcript": "Vikram shirt, chest 40, waist 34, advance 600, total 600, aaj delivery"
+    }
+  ],
+  "medical": [
+    {
+      "id": "M1",
+      "type": "normal_english",
+      "transcript": "Paracetamol 500mg, batch B204, expiry 12/2027, 50 units, amount 250"
+    },
+    {
+      "id": "M2",
+      "type": "normal_hinglish",
+      "transcript": "Azithromycin batch AZ45, expiry 05/2028, bees units, total chaar sau rupaye"
+    },
+    {
+      "id": "M3",
+      "type": "number_in_words",
+      "transcript": "Crocin tablet, batch C99, expiry 08/2027, fifty units, amount 300, advance 100"
+    },
+    {
+      "id": "M4",
+      "type": "missing_field",
+      "transcript": "Combiflam syrup, expiry 11/2026, 10 units, total 120"
+    },
+    {
+      "id": "M5",
+      "type": "out_of_range_past_expiry",
+      "transcript": "Amoxicillin capsule, batch AM12, expiry 01/2020, 30 units, total 450"
+    },
+    {
+      "id": "M6",
+      "type": "out_of_range_future_expiry",
+      "transcript": "Insulin pen, batch IN88, expiry 06/2035, 5 units, total 1500"
+    }
+  ],
+  "baker": [
+    {
+      "id": "B1",
+      "type": "normal_english",
+      "transcript": "Happy Birthday Aryan cake, chocolate flavour, weight 1.5 kg, advance 200, total 600, due in 2 days"
+    },
+    {
+      "id": "B2",
+      "type": "normal_hinglish",
+      "transcript": "Pineapple cake do kilo, message Best Mom, advance teen sau, total saat sau, kal shaam tak"
+    },
+    {
+      "id": "B3",
+      "type": "number_in_words",
+      "transcript": "Vanilla cake, weight three kg, message Welcome Home, advance five hundred, total one thousand, due in 3 days"
+    },
+    {
+      "id": "B4",
+      "type": "missing_field",
+      "transcript": "Birthday cake 2 kg, total 800, advance 400, parso chahiye, Rohan"
+    },
+    {
+      "id": "B5",
+      "type": "out_of_range_underweight",
+      "transcript": "Custom mini cupcake cake, strawberry, weight 0.1 kg, total 100, advance 50"
+    },
+    {
+      "id": "B6",
+      "type": "out_of_range_overweight",
+      "transcript": "Grand wedding cake 30 kg, butterscotch flavour, advance 5000, total 15000, 5 din mein"
+    }
+  ]
+}
+
