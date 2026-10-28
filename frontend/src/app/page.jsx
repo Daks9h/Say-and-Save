@@ -168,12 +168,6 @@ export default function LandingPage() {
       {/* Hero Visual Section - High Design, No Text Flooding */}
       <section className="relative overflow-hidden pt-12 pb-16 px-6">
         <div className="max-w-5xl mx-auto flex flex-col items-center text-center">
-          {/* Subtle Tag Pill */}
-          <Badge variant="indigo" className="mb-4 px-3 py-1 text-xs font-semibold flex items-center gap-1.5">
-            <Zap className="w-3.5 h-3.5 text-indigo-600" />
-            Fast Voice Ledger &bull; English Auto-Fill
-          </Badge>
-
           {/* Primary Headline */}
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 max-w-3xl leading-[1.15]">
             Speak your orders. <br />
