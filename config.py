@@ -24,7 +24,7 @@ CLOUD_MODEL = "gemini-3.5-flash-lite"
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 
 # Project Settings
-PROJECT_NAME = "Dukaan Diary"
+PROJECT_NAME = "Say & Save"
 CURRENCY = "INR"
 CURRENCY_SYMBOL = "₹"
 UNIT_MEASUREMENT = "inches"

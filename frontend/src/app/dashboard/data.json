@@ -1,0 +1,52 @@
+[
+  {
+    "id": 1,
+    "person": "Verma Uncle",
+    "item": "Suit Stitching",
+    "service_type": "tailor",
+    "amount": 1200,
+    "advance": 500,
+    "balance_due": 700,
+    "due_date": "2026-11-02",
+    "status": "open",
+    "needs_attention": true,
+    "measurements": {
+      "chest": "40 in",
+      "waist": "34 in",
+      "length": "42 in"
+    }
+  },
+  {
+    "id": 2,
+    "person": "Sharma Ji",
+    "item": "Kurta Pyjama",
+    "service_type": "tailor",
+    "amount": 850,
+    "advance": 850,
+    "balance_due": 0,
+    "due_date": "2026-11-05",
+    "status": "done",
+    "needs_attention": false,
+    "measurements": {
+      "chest": "38 in",
+      "length": "39 in"
+    }
+  },
+  {
+    "id": 3,
+    "person": "Priya Singh",
+    "item": "Blouse Alteration",
+    "service_type": "tailor",
+    "amount": 400,
+    "advance": 100,
+    "balance_due": 300,
+    "due_date": "2026-10-30",
+    "status": "open",
+    "needs_attention": true,
+    "measurements": {
+      "bust": "36 in",
+      "waist": "30 in"
+    }
+  }
+]
+

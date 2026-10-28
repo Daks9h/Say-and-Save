@@ -383,22 +383,28 @@ def get_latest_customer_card(person_name: str, shop_type: Optional[str] = Query(
 
 
 class NotificationRequest(BaseModel):
-    card: Dict[str, Any]
+    card: Optional[Dict[str, Any]] = None
+    card_data: Optional[Dict[str, Any]] = None
     owner_email: Optional[str] = None
     owner_phone: Optional[str] = None
     email: Optional[str] = None
+    channel: Optional[str] = None
+    message: Optional[str] = None
     telegram: bool = False
 
 
 @app.post("/notify")
 def trigger_notification(req: NotificationRequest):
     results = {}
+    card_payload = req.card or req.card_data or {}
     target_email = req.owner_email or req.email
-    if target_email:
-        results["email"] = send_owner_order_card(target_email, req.card, shop_name=config.PROJECT_NAME)
-    if req.owner_phone:
-        results["sms"] = send_owner_sms(req.owner_phone, req.card, shop_name=config.PROJECT_NAME)
+    channel = req.channel or "all"
+
+    if (channel in ("all", "email")) and target_email:
+        results["email"] = send_owner_order_card(target_email, card_payload, shop_name=config.PROJECT_NAME)
+    if (channel in ("all", "sms")) and req.owner_phone:
+        results["sms"] = send_owner_sms(req.owner_phone, card_payload, shop_name=config.PROJECT_NAME)
     if req.telegram:
-        msg = f"<b>Order Alert</b>: {req.card.get('person')} - {req.card.get('item')} (Balance: ₹{req.card.get('balance_due')}, Due: {req.card.get('due_date')})"
+        msg = req.message or f"<b>Order Alert</b>: {card_payload.get('person')} - {card_payload.get('item')} (Balance: ₹{card_payload.get('balance_due')}, Due: {card_payload.get('due_date')})"
         results["telegram"] = send_telegram_alert(msg)
     return results

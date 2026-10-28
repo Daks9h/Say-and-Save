@@ -1,139 +1,103 @@
-# Dukaan Diary (दुकान डायरी)
+# Say & Save
 
-> **Voice-Powered Order Notebook and Ledger for Local Indian Shops**  
-> *Built for Hacktoberfest Open-Source AI Challenge*
+> **Voice-First Order Notebook, Flashcards & Ledger for Small Businesses**  
+> Convert regional spoken customer notes into clean English orders, physical flashcards, and automated balances in 3 seconds.
 
-Dukaan Diary turns spoken voice notes into clean, validated customer order cards with zero typing. Designed for small single-person shops—such as tailors, chemists, and bakers—who are too busy attending customers to type into complex billing software.
-
----
-
-## 🌟 Key Capabilities
-
-1. **Voice-First Order Entry & English Auto-Fill**:
-   - Speak naturally in Hindi, Hinglish, or English:
-     > *"Verma uncle suit 5 din mein dena hai, total 1200, advance 500"*
-   - Automatically transcribes and converts regional speech into clean, capitalized English entities.
-2. **Instant Flashcard Generation**:
-   - Voice notes automatically generate a physical bahi-khata style flashcard in the ledger with zero typing.
-   - Shows total amount, advance paid, balance due in real-time, and ready dates.
-3. **Inline Flashcard Editing**:
-   - Click "✏️ Edit Flashcard" anytime to modify customer names, items, measurements, or amounts.
-   - Financial balances (`balance_due = amount - advance`) automatically recompute in real-time.
-4. **Speed-First Hybrid Routing**:
-   - **Local Mode (Default)**: Uses local `gemma4:e2b` running via Ollama. 100% offline, zero cloud fees, and private.
-   - **Cloud Mode (Fast)**: Uses Google `gemini-3.5-flash-lite` for single-call audio extraction (~3.5s).
-   - **Instant Failover**: If the cloud API errors or hits 429 rate limits, it automatically fails over to the local model with a 60-second cooldown.
-5. **Strict Safety & Verification (AI Never Computes Math or Dates)**:
-   - The AI model only extracts spoken entities.
-   - All financial balances (`balance_due = amount - advance`), due dates (`kal`, `parso`, `5 din mein`), and leap-year expiry dates are computed deterministically in **plain Python**.
-   - Model proposes $\rightarrow$ Python validates range bounds $\rightarrow$ Human can edit or verify.
-6. **Tailored Shop Packs**:
-   - ✂️ **Tailor**: Chest, waist, shoulder, length in inches (10–70 in bounds), and customer measurement memory.
-   - 💊 **Medical Store**: Batch number, expiry date (MM/YYYY), unit counts, and automatic alerts for medicines expiring within 30 days.
-   - 🎂 **Bakery & Cakes**: Flavour, cake message, and weight limits (0.25 kg to 20 kg).
-   - 🔧 **Repair Shop & 🧺 Laundry**: Configurable experimental packs.
-7. **Customer Notifications**:
-   - Instant HTML invoice emails to customers detailing advance paid, balance due, and ready date.
-   - Telegram notifications for shop owners.
-8. **Needs Attention Dashboard**:
-   - Real-time highlights of urgent orders due within 2 days or medicines nearing expiry.
+Say & Save transforms spoken voice notes into clean, structured customer orders with zero manual typing. Built with a modular shadcn dashboard specifically tailored for single-owner operations—including tailors, pharmacies, bakeries, electronics repair shops, and laundry services.
 
 ---
 
-## 🚀 Quick Start (1-Click Run)
+## Key Capabilities
+
+1. **Voice-First Recording & Automatic English Conversion**:
+   - Speak naturally in Hindi, Hinglish, or English (e.g., *"Verma Uncle 3-piece suit stitching, deliver by Friday, total 1200, advance 500"*).
+   - Audio is converted into clean English fields with automated due-date and financial calculation in under 4 seconds.
+2. **Dedicated Single-Responsibility Workspace Sections**:
+   - **Overview**: High-level store metrics, receivable trends, and urgent deliveries.
+   - **Voice Recorder Studio**: Clean recording studio with live microphone capture, audio file upload, and sample note testing.
+   - **Order Flashcards & Slips**: Trade-specific physical slip specifications, measurement memory, inline editing, and instant owner notifications.
+   - **Pending Bills & Receivables**: Tracks unpaid balances, accounts recovery, and settlement logging.
+   - **Master Ledger**: Filterable, sortable data table for all store orders.
+3. **Owner-Targeted Notifications**:
+   - **Resend Email Delivery**: Rich HTML order slips and pending receivable summaries sent directly to the shopkeeper's registered email.
+   - **TextBee SMS Alerts**: Automated deadline SMS notifications dispatched through the owner's linked Android gateway.
+4. **Tailored Trade Packs**:
+   - **Tailor & Boutique**: Chest, waist, shoulder, length, and customer measurement records.
+   - **Medical Store & Pharmacy**: Batch numbers, expiry tracking, prescription logs, and 30-day expiry alerts.
+   - **Bakery & Confectionery**: Cake weights, flavours, custom messages, and event times.
+   - **Electronics & Repair**: Device brand, model, fault descriptions, and estimate quotes.
+   - **Laundry & Dry Cleaners**: Garment counts, wash/iron services, and collection dates.
+5. **Speed-First Hybrid Intelligence**:
+   - **Local Mode**: Runs private `gemma4:e2b` via Ollama for 100% offline security.
+   - **Cloud Mode**: Uses Google Gemini 3.5 Flash Lite for sub-4s high-speed extraction.
+   - **Deterministic Python Verification Gate**: The AI model only extracts entities; all mathematical calculations (`balance_due = amount - advance`) and calendar dates are computed strictly in Python.
+6. **Accessibility & Localization**:
+   - Complete Dark Mode / Light Mode support with persistent state.
+   - Instant English / Hindi language toggle across all navigation, cards, and modal components.
+   - Locked occupation safeguards to prevent accidental ledger field mismatches.
+
+---
+
+## Local Development
 
 ### Prerequisites
-- **Python**: 3.12+
-- **Node.js**: v18+
-- **Ollama**: Installed with `ollama pull gemma4:e2b`
+- Python 3.12+
+- Node.js 18+
+- (Optional for offline mode) Ollama with `gemma4:e2b`
 
-### Run Both Servers in 1 Command
+### 1. Backend Setup
 ```bash
-# Clone the repository and navigate into the folder
-cd niat-sgsu
+# Clone the repository
+git clone https://github.com/Daks9h/Say-and-Save.git
+cd Say-and-Save
 
-# Install python dependencies
+# Install Python dependencies
 pip install -r requirements.txt
 
-# Start both FastAPI Backend (:8000) and Next.js Argon Frontend (:3000)
-python start_app.py
+# Create .env from template and add your API keys
+cp .env.example .env
+
+# Start FastAPI backend
+python -m uvicorn app:app --host 0.0.0.0 --port 8000
 ```
 
-Open your browser at **`http://localhost:3000`**.
-
----
-
-## 🛠️ Architecture
-
-```
-                                ┌───────────────────────────────────────┐
-                                │       Next.js Argon Dashboard         │
-                                │   (Audio recorder, Order review,      │
-                                │    Needs-Attention ledger, Search)    │
-                                └───────────────────┬───────────────────┘
-                                                    │ REST API
-                                                    ▼
-                                ┌───────────────────────────────────────┐
-                                │         FastAPI Python Engine         │
-                                │   (/process-audio, /extract, /cards)  │
-                                └───────────────────┬───────────────────┘
-                                                    │
-                                     ┌──────────────┴──────────────┐
-                                     ▼                             ▼
-                        ┌─────────────────────────┐   ┌─────────────────────────┐
-                        │   Local Backend (Ollama)│   │   Cloud Backend (Gemini)│
-                        │        gemma4:e2b       │   │   gemini-3.5-flash-lite │
-                        │  (100% Offline/Private) │   │  (High-Speed Fallback)  │
-                        └────────────┬────────────┘   └────────────┬────────────┘
-                                     └──────────────┬──────────────┘
-                                                    │
-                                                    ▼
-                                ┌───────────────────────────────────────┐
-                                │       Python Verification Gate        │
-                                │  - Pydantic Schema Validation         │
-                                │  - Range bounds (10-70 in, 0.25-20kg) │
-                                │  - Deterministic Date & Math Calc     │
-                                │  - Grounding Check ("not heard" alert)│
-                                └───────────────────┬───────────────────┘
-                                                    │
-                                                    ▼
-                                ┌───────────────────────────────────────┐
-                                │          SQLite (dukaan.db)           │
-                                │   + Email & Telegram Notifications    │
-                                └───────────────────────────────────────┘
-```
-
----
-
-## ⏱️ Measured Performance & Latency
-
-From [`LATENCY_REPORT.md`](file:///c:/Users/ADMIN/Desktop/niat-sgsu/LATENCY_REPORT.md) and [`PREFLIGHT.md`](file:///c:/Users/ADMIN/Desktop/niat-sgsu/PREFLIGHT.md) on an RTX 3050 Laptop / Intel Core i5:
-
-| Pipeline Stage | Local Backend (`gemma4:e2b`) | Cloud Backend (`gemini-3.5-flash-lite`) |
-|---|---|---|
-| Audio Transcription | `2,298 ms` | `2,162 ms` |
-| Structured Extraction | `4,030 ms` | `1,053 ms` |
-| Python Validation | `0.06 ms` | `0.06 ms` |
-| Grounding Check | `0.02 ms` | `0.02 ms` |
-| Total Post-Response Overhead | **< 0.1 ms** (Budget: 50 ms) | **< 0.1 ms** (Budget: 50 ms) |
-
----
-
-## 🔒 Honest Claims & Known Limitations
-
-- **Privacy & Offline Guarantee:** Runs fully on the shop's own computer when cloud mode is OFF. No voice data or customer records leave the machine in Local Mode.
-- **Cloud Mode Notice:** When Cloud Mode is toggled ON by the user, audio recordings are sent to the Google Gemini API to accelerate extraction.
-- **Hardware Requirement:** Local Gemma 4 requires a decent GPU (e.g., NVIDIA RTX 3050 or higher) or modern multi-core CPU. On low-end shop hardware, Cloud Mode provides high responsiveness.
-- **Regional Speech:** Names with regional honorifics or loud background shop noises can occasionally be misheard. The editable preview card and human confirmation button are strictly mandatory to ensure 100% accuracy.
-
----
-
-## 🧪 Testing
-
-Run all unit tests covering date words, leap-year handling, expiry parsing, and range bounds:
+### 2. Frontend Setup
 ```bash
-pytest -v tests/test_core_logic.py
-pytest -v tests/test_db.py
-```
-*(All 15 tests pass in < 0.5s).*
+# In a new terminal, navigate to the frontend folder
+cd frontend
 
+# Install Node dependencies
+npm install
+
+# Run development server
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## Deploying on Vercel
+
+To deploy the **Say & Save** frontend on Vercel:
+
+1. Push your repository to GitHub: `https://github.com/Daks9h/Say-and-Save`
+2. Go to [Vercel Dashboard](https://vercel.com/new) and click **Add New Project** &rarr; **Import** your repository.
+3. Configure the Project Settings:
+   - **Framework Preset**: `Next.js`
+   - **Root Directory**: Click `Edit` and select `frontend`
+   - **Build Command**: `npm run build` (default)
+   - **Output Directory**: `.next` (default)
+4. Add Environment Variables:
+   - `NEXT_PUBLIC_API_URL`: The URL of your deployed backend (e.g., hosted on Render, Railway, or Google Cloud Run). If testing locally or via tunnel, specify your public endpoint.
+5. Click **Deploy**. Vercel will build and deploy the Next.js frontend to a global edge CDN.
+
+---
+
+## Testing
+
+Run the automated test suite covering deterministic calculations, audio pipelines, and API routes:
+```bash
+pytest tests/
+```
+*(All 23 unit and integration tests pass).*

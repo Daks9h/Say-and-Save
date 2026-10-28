@@ -9,7 +9,7 @@ def test_api_health():
     assert res.status_code == 200
     data = res.json()
     assert data["status"] == "healthy"
-    assert data["project"] == "Dukaan Diary"
+    assert data["project"] == "Say & Save"
 
 def test_api_config():
     res = client.get("/config")

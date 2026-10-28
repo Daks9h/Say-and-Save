@@ -1,10 +1,13 @@
 .env
+.env*.local
 __pycache__/
 *.pyc
+.pytest_cache/
 venv/
 node_modules/
 .next/
 dist/
 build/
 *.db
+.DS_Store
 

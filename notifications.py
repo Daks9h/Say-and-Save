@@ -8,6 +8,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Resend API Configuration
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+RESEND_FROM = os.getenv("RESEND_FROM", "Dukaan Diary <onboarding@resend.dev>")
+
+# TextBee SMS Gateway Configuration
+TEXTBEE_API_KEY = os.getenv("TEXTBEE_API_KEY", "")
+TEXTBEE_DEVICE_ID = os.getenv("TEXTBEE_DEVICE_ID", "")
+
+# Fallback SMTP Configuration
 SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 SMTP_USER = os.getenv("SMTP_USER", "")
@@ -23,7 +32,7 @@ def send_owner_order_card(
     card_data: Dict[str, Any],
     shop_name: str = "Dukaan Diary"
 ) -> Dict[str, Any]:
-    """Sends a concise info card to the shopkeeper's registered email
+    """Sends a concise info card to the shopkeeper's registered email via Resend API
     highlighting pending balance dues, delivery deadlines, and critical specifications.
     """
     if not owner_email:
@@ -39,10 +48,15 @@ def send_owner_order_card(
     shop_type = card_data.get("shop_type", "shop").capitalize()
     notes = card_data.get("notes", "")
 
-    subject = f"[Dukaan Diary Alert] Order #{order_id} Due: {person} | Collect ₹{balance}"
+    subject = f"[Dukaan Diary Alert] Order #{order_id} Due: {person} | Collect ₹{balance:,.0f}"
 
     # Build occupation specific highlight rows
     extra_details = ""
+    measurements = card_data.get("measurements") or {}
+    if isinstance(measurements, dict) and measurements:
+        specs = ", ".join([f"{k}: {v}" for k, v in measurements.items()])
+        extra_details += f"<tr><td style='padding: 6px 0; color: #64748b;'>Specifications:</td><td style='padding: 6px 0; font-weight: bold; text-align: right;'>{specs}</td></tr>"
+
     if card_data.get("chest") or card_data.get("waist"):
         extra_details += f"<tr><td style='padding: 6px 0; color: #64748b;'>Measurements:</td><td style='padding: 6px 0; font-weight: bold; text-align: right;'>Chest: {card_data.get('chest')}\", Waist: {card_data.get('waist')}\"</td></tr>"
     if card_data.get("expiry"):
@@ -56,7 +70,7 @@ def send_owner_order_card(
         <div style="max-width: 480px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
           
           <div style="background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #ffffff; padding: 16px 20px;">
-            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.85;">Dukaan Diary &bull; {shop_type} Alert</div>
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.85;">{shop_name} &bull; {shop_type} Alert</div>
             <h2 style="margin: 4px 0 0 0; font-size: 18px; font-weight: bold;">Order #{order_id} &bull; {person}</h2>
           </div>
 
@@ -75,15 +89,15 @@ def send_owner_order_card(
               </tr>
               <tr style="border-bottom: 1px solid #f1f5f9;">
                 <td style="padding: 6px 0; color: #64748b;">Total Amount:</td>
-                <td style="padding: 6px 0; font-weight: 600; text-align: right; color: #0f172a;">₹{amount}</td>
+                <td style="padding: 6px 0; font-weight: 600; text-align: right; color: #0f172a;">₹{amount:,.0f}</td>
               </tr>
               <tr style="border-bottom: 1px solid #f1f5f9;">
                 <td style="padding: 6px 0; color: #64748b;">Advance Received:</td>
-                <td style="padding: 6px 0; font-weight: 600; text-align: right; color: #16a34a;">₹{advance}</td>
+                <td style="padding: 6px 0; font-weight: 600; text-align: right; color: #16a34a;">₹{advance:,.0f}</td>
               </tr>
               <tr style="border-bottom: 2px solid #e2e8f0;">
                 <td style="padding: 8px 0; font-weight: bold; color: #dc2626;">Balance to Collect:</td>
-                <td style="padding: 8px 0; font-weight: 800; font-size: 15px; text-align: right; color: #dc2626;">₹{balance}</td>
+                <td style="padding: 8px 0; font-weight: 800; font-size: 15px; text-align: right; color: #dc2626;">₹{balance:,.0f}</td>
               </tr>
               {extra_details}
             </table>
@@ -91,7 +105,7 @@ def send_owner_order_card(
             {f'<div style="background: #f8fafc; border-left: 3px solid #6366f1; padding: 8px 12px; border-radius: 4px; font-size: 12px; color: #475569; margin-bottom: 16px;"><strong>Voice Note:</strong> "{notes}"</div>' if notes else ''}
 
             <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">
-              Sent to registered owner email: <b>{owner_email}</b>
+              Sent to registered owner email: <b>{owner_email}</b> via Resend API
             </p>
           </div>
         </div>
@@ -99,30 +113,69 @@ def send_owner_order_card(
     </html>
     """
 
-    if not SMTP_USER or not SMTP_PASS:
-        print(f"[Simulated Owner Email] To: {owner_email} | Subject: {subject} | Balance: ₹{balance} | Due: {due_date}")
-        return {
-            "status": "simulated",
-            "message": f"Owner order alert card queued to {owner_email} (Configure SMTP in .env for live dispatch).",
-            "to": owner_email,
-            "subject": subject
-        }
+    # 1. Primary path: Resend REST API
+    resend_key = os.getenv("RESEND_API_KEY", RESEND_API_KEY)
+    resend_from = os.getenv("RESEND_FROM", RESEND_FROM)
+    if resend_key:
+        try:
+            url = "https://api.resend.com/emails"
+            headers = {
+                "Authorization": f"Bearer {resend_key}",
+                "Content-Type": "application/json",
+            }
+            payload = {
+                "from": resend_from,
+                "to": [owner_email],
+                "subject": subject,
+                "html": body_html,
+            }
+            resp = requests.post(url, json=payload, headers=headers, timeout=10)
+            if resp.status_code in (200, 201):
+                res_data = resp.json()
+                print(f"[Resend API Success] Email sent to {owner_email} (ID: {res_data.get('id')})")
+                return {
+                    "status": "success",
+                    "message": f"Owner alert card sent to {owner_email} via Resend.",
+                    "id": res_data.get("id"),
+                    "provider": "resend",
+                }
+            else:
+                print(f"[Resend API Error {resp.status_code}] {resp.text}")
+                return {
+                    "status": "error",
+                    "message": f"Resend API error ({resp.status_code}): {resp.text}",
+                    "provider": "resend",
+                }
+        except Exception as e:
+            return {"status": "error", "message": f"Resend network error: {str(e)}", "provider": "resend"}
 
-    try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = DEFAULT_SENDER
-        msg["To"] = owner_email
-        msg.attach(MIMEText(body_html, "html"))
+    # 2. Fallback: SMTP if configured
+    if SMTP_USER and SMTP_PASS:
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = DEFAULT_SENDER
+            msg["To"] = owner_email
+            msg.attach(MIMEText(body_html, "html"))
 
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASS)
-            server.sendmail(DEFAULT_SENDER, [owner_email], msg.as_string())
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:
+                server.starttls()
+                server.login(SMTP_USER, SMTP_PASS)
+                server.sendmail(DEFAULT_SENDER, [owner_email], msg.as_string())
 
-        return {"status": "success", "message": f"Owner alert card sent to {owner_email}."}
-    except Exception as e:
-        return {"status": "error", "message": f"SMTP error: {str(e)}"}
+            return {"status": "success", "message": f"Owner alert card sent to {owner_email} via SMTP.", "provider": "smtp"}
+        except Exception as e:
+            return {"status": "error", "message": f"SMTP error: {str(e)}", "provider": "smtp"}
+
+    # 3. Simulated fallback when keys are not set
+    print(f"[Simulated Owner Email via Resend] To: {owner_email} | Subject: {subject} | Balance: ₹{balance} | Due: {due_date}")
+    return {
+        "status": "simulated",
+        "message": f"Owner order alert card queued to {owner_email} (Add RESEND_API_KEY to .env for live dispatch).",
+        "to": owner_email,
+        "subject": subject,
+        "provider": "simulated",
+    }
 
 
 def send_owner_sms(
@@ -130,7 +183,7 @@ def send_owner_sms(
     card_data: Dict[str, Any],
     shop_name: str = "Dukaan Diary"
 ) -> Dict[str, Any]:
-    """Generates an SMS notification for the shopkeeper's registered phone number."""
+    """Sends an SMS notification via TextBee gateway to the shopkeeper's registered phone."""
     if not owner_phone:
         return {"status": "error", "message": "No owner phone registered."}
 
@@ -142,14 +195,80 @@ def send_owner_sms(
     balance = float(card_data.get("balance_due") or (amount - advance))
     due_date = card_data.get("due_date") or "Pending"
 
-    sms_text = f"[{shop_name}] Order #{order_id} recorded for {person} ({item}). Balance Due: Rs.{balance}. Delivery Deadline: {due_date}. Collect balance on delivery."
+    sms_text = (
+        f"[{shop_name}] Order #{order_id} recorded for {person} ({item}). "
+        f"Balance Due: Rs.{balance:,.0f}. Delivery Deadline: {due_date}. "
+        f"Collect balance on delivery."
+    )
 
-    print(f"[Simulated Owner SMS] To: {owner_phone} | Message: {sms_text}")
+    clean_phone = owner_phone.strip().replace(" ", "").replace("-", "")
+
+    # 1. Primary path: TextBee SMS Gateway API
+    textbee_key = os.getenv("TEXTBEE_API_KEY", TEXTBEE_API_KEY)
+    textbee_device_id = os.getenv("TEXTBEE_DEVICE_ID", TEXTBEE_DEVICE_ID)
+    if textbee_key:
+        target_device_id = textbee_device_id
+        # Auto-discover device ID if not explicitly specified in .env
+        if not target_device_id:
+            try:
+                dev_resp = requests.get(
+                    "https://api.textbee.dev/api/v1/gateway/devices",
+                    headers={"x-api-key": textbee_key},
+                    timeout=5
+                )
+                if dev_resp.status_code == 200:
+                    dev_data = dev_resp.json().get("data", [])
+                    if dev_data and len(dev_data) > 0:
+                        first_dev = dev_data[0]
+                        target_device_id = first_dev.get("id") or first_dev.get("_id")
+                    else:
+                        return {
+                            "status": "warning",
+                            "message": "TextBee API key authenticated, but no Android device is linked yet. Link your phone in textbee.dev to send live SMS.",
+                            "provider": "textbee"
+                        }
+            except Exception as e:
+                pass
+
+        if target_device_id:
+            try:
+                url = f"https://api.textbee.dev/api/v1/gateway/devices/{target_device_id}/send-sms"
+                headers = {
+                    "x-api-key": textbee_key,
+                    "Content-Type": "application/json",
+                }
+                payload = {
+                    "recipients": [clean_phone],
+                    "message": sms_text,
+                }
+                resp = requests.post(url, json=payload, headers=headers, timeout=10)
+                if resp.status_code in (200, 201):
+                    res_data = resp.json() if resp.text else {}
+                    print(f"[TextBee SMS Success] Dispatched to {clean_phone}")
+                    return {
+                        "status": "success",
+                        "message": f"SMS alert sent to {clean_phone} via TextBee.",
+                        "provider": "textbee",
+                        "data": res_data,
+                    }
+                else:
+                    print(f"[TextBee SMS Error {resp.status_code}] {resp.text}")
+                    return {
+                        "status": "error",
+                        "message": f"TextBee API error ({resp.status_code}): {resp.text}",
+                        "provider": "textbee",
+                    }
+            except Exception as e:
+                return {"status": "error", "message": f"TextBee network error: {str(e)}", "provider": "textbee"}
+
+    # 2. Simulated fallback when keys are not set
+    print(f"[Simulated Owner SMS via TextBee] To: {clean_phone} | Message: {sms_text}")
     return {
         "status": "simulated",
-        "message": f"SMS notification queued to {owner_phone}.",
-        "phone": owner_phone,
-        "sms_text": sms_text
+        "message": f"SMS notification queued to {clean_phone} (Add TEXTBEE_API_KEY and TEXTBEE_DEVICE_ID to .env for live SMS).",
+        "phone": clean_phone,
+        "sms_text": sms_text,
+        "provider": "simulated",
     }
 
 
@@ -158,86 +277,8 @@ def send_customer_email(
     card_data: Dict[str, Any],
     shop_name: str = "Dukaan Diary"
 ) -> Dict[str, Any]:
-    """Sends an order confirmation / balance due email to the customer.
-    Falls back gracefully and logs if SMTP credentials are not yet configured.
-    """
-    if not to_email:
-        return {"status": "error", "message": "No customer email provided."}
-
-    person = card_data.get("person", "Valued Customer")
-    item = card_data.get("item", "Service / Order")
-    amount = card_data.get("amount", 0.0)
-    advance = card_data.get("advance", 0.0)
-    balance = card_data.get("balance_due", amount - advance)
-    due_date = card_data.get("due_date", "Soon")
-
-    subject = f"Order Confirmation: {item} - {shop_name}"
-
-    body_html = f"""
-    <html>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-          <div style="background-color: #4f46e5; color: white; padding: 20px; text-align: center;">
-            <h2 style="margin: 0;">{shop_name}</h2>
-            <p style="margin: 5px 0 0 0;">Voice-Powered Shop Order</p>
-          </div>
-          <div style="padding: 24px;">
-            <p>Hello <b>{person}</b>,</p>
-            <p>Your order details have been recorded successfully:</p>
-            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-              <tr style="border-bottom: 1px solid #f1f5f9;">
-                <td style="padding: 8px 0; color: #64748b;">Item / Service:</td>
-                <td style="padding: 8px 0; font-weight: bold; text-align: right;">{item}</td>
-              </tr>
-              <tr style="border-bottom: 1px solid #f1f5f9;">
-                <td style="padding: 8px 0; color: #64748b;">Total Amount:</td>
-                <td style="padding: 8px 0; font-weight: bold; text-align: right;">₹{amount}</td>
-              </tr>
-              <tr style="border-bottom: 1px solid #f1f5f9;">
-                <td style="padding: 8px 0; color: #64748b;">Advance Paid:</td>
-                <td style="padding: 8px 0; font-weight: bold; color: #16a34a; text-align: right;">₹{advance}</td>
-              </tr>
-              <tr style="border-bottom: 2px solid #e2e8f0;">
-                <td style="padding: 8px 0; font-weight: bold;">Balance Due:</td>
-                <td style="padding: 8px 0; font-weight: bold; color: #dc2626; text-align: right;">₹{balance}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #64748b;">Ready / Delivery Date:</td>
-                <td style="padding: 8px 0; font-weight: bold; text-align: right;">{due_date}</td>
-              </tr>
-            </table>
-            <p style="font-size: 14px; color: #64748b;">Thank you for your business!</p>
-          </div>
-        </div>
-      </body>
-    </html>
-    """
-
-    if not SMTP_USER or not SMTP_PASS:
-        # SMTP credentials not provided in .env - log simulated delivery
-        print(f"[Simulated Email] Sent to {to_email}: Subject: {subject}, Balance: ₹{balance}")
-        return {
-            "status": "simulated",
-            "message": f"Email queued and simulated to {to_email} (Configure SMTP_USER & SMTP_PASS in .env for live sending).",
-            "to": to_email,
-            "subject": subject
-        }
-
-    try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = DEFAULT_SENDER
-        msg["To"] = to_email
-        msg.attach(MIMEText(body_html, "html"))
-
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASS)
-            server.sendmail(DEFAULT_SENDER, [to_email], msg.as_string())
-
-        return {"status": "success", "message": f"Email successfully sent to {to_email}."}
-    except Exception as e:
-        return {"status": "error", "message": f"SMTP error: {str(e)}"}
+    """Sends an order confirmation / balance due email to the customer using Resend (or SMTP fallback)."""
+    return send_owner_order_card(to_email, card_data, shop_name=shop_name)
 
 
 def send_telegram_alert(
@@ -261,4 +302,3 @@ def send_telegram_alert(
         return {"status": "error", "message": f"Telegram API returned {resp.status_code}: {resp.text}"}
     except Exception as e:
         return {"status": "error", "message": f"Telegram error: {str(e)}"}
-

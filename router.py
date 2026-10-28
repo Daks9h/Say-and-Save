@@ -155,6 +155,23 @@ class Router:
         timings: Dict[str, Any] = {}
         warnings: List[Dict[str, str]] = []
 
+        # Drill guard: Check audio length (30-second cap)
+        try:
+            import soundfile as sf
+            info = sf.info(wav_path)
+            if info.duration > 30.0:
+                from packs import get_card_model
+                model_cls = get_card_model(shop_type)
+                card = model_cls(shop_type=shop_type)
+                warnings.append({
+                    "field": "audio",
+                    "message": f"Audio duration {info.duration:.1f}s exceeds maximum allowed 30 seconds. Please fill manually.",
+                    "severity": "error"
+                })
+                return card, "", "manual_fallback", timings, warnings
+        except Exception:
+            pass
+
         try:
             # 1. Attempt preferred backend (Fast single-call path for Cloud Gemini)
             if preferred == "cloud" and self.cloud:
