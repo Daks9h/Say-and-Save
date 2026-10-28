@@ -9,25 +9,33 @@ Dukaan Diary turns spoken voice notes into clean, validated customer order cards
 
 ## 🌟 Key Capabilities
 
-1. **Voice-First Order Entry**: Speak naturally in English or Hinglish:
-   > *"Sunita bhabhi blouse, chest 36, waist 30, 5 din mein chahiye, advance 300, total 900"*
-2. **Speed-First Hybrid Routing**:
+1. **Voice-First Order Entry & English Auto-Fill**:
+   - Speak naturally in Hindi, Hinglish, or English:
+     > *"Verma uncle suit 5 din mein dena hai, total 1200, advance 500"*
+   - Automatically transcribes and converts regional speech into clean, capitalized English entities.
+2. **Instant Flashcard Generation**:
+   - Voice notes automatically generate a physical bahi-khata style flashcard in the ledger with zero typing.
+   - Shows total amount, advance paid, balance due in real-time, and ready dates.
+3. **Inline Flashcard Editing**:
+   - Click "✏️ Edit Flashcard" anytime to modify customer names, items, measurements, or amounts.
+   - Financial balances (`balance_due = amount - advance`) automatically recompute in real-time.
+4. **Speed-First Hybrid Routing**:
    - **Local Mode (Default)**: Uses local `gemma4:e2b` running via Ollama. 100% offline, zero cloud fees, and private.
-   - **Cloud Mode (Optional)**: Uses Google `gemini-3.5-flash-lite` for sub-second text extraction when cloud consent is enabled.
+   - **Cloud Mode (Fast)**: Uses Google `gemini-3.5-flash-lite` for single-call audio extraction (~3.5s).
    - **Instant Failover**: If the cloud API errors or hits 429 rate limits, it automatically fails over to the local model with a 60-second cooldown.
-3. **Strict Safety & Verification (AI Never Computes Math or Dates)**:
+5. **Strict Safety & Verification (AI Never Computes Math or Dates)**:
    - The AI model only extracts spoken entities.
    - All financial balances (`balance_due = amount - advance`), due dates (`kal`, `parso`, `5 din mein`), and leap-year expiry dates are computed deterministically in **plain Python**.
-   - Model proposes $\rightarrow$ Python validates range bounds $\rightarrow$ Shopkeeper reviews and confirms before anything is saved.
-4. **Tailored Shop Packs**:
+   - Model proposes $\rightarrow$ Python validates range bounds $\rightarrow$ Human can edit or verify.
+6. **Tailored Shop Packs**:
    - ✂️ **Tailor**: Chest, waist, shoulder, length in inches (10–70 in bounds), and customer measurement memory.
    - 💊 **Medical Store**: Batch number, expiry date (MM/YYYY), unit counts, and automatic alerts for medicines expiring within 30 days.
    - 🎂 **Bakery & Cakes**: Flavour, cake message, and weight limits (0.25 kg to 20 kg).
    - 🔧 **Repair Shop & 🧺 Laundry**: Configurable experimental packs.
-5. **Customer Notifications**:
+7. **Customer Notifications**:
    - Instant HTML invoice emails to customers detailing advance paid, balance due, and ready date.
    - Telegram notifications for shop owners.
-6. **Needs Attention Dashboard**:
+8. **Needs Attention Dashboard**:
    - Real-time highlights of urgent orders due within 2 days or medicines nearing expiry.
 
 ---

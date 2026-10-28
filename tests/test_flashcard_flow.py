@@ -62,3 +62,4 @@ def test_flashcard_auto_create_and_edit():
     # 4. Clean up
     del_res = client.delete(f"/cards/{card_id}")
     assert del_res.status_code == 200
+
