@@ -81,9 +81,9 @@ const OCCUPATIONS = [
 export default function LandingPage() {
   const router = useRouter();
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authTab, setAuthTab] = useState("signup"); // "signup" or "login"
   const [selectedOccupation, setSelectedOccupation] = useState("tailor");
   const [shopName, setShopName] = useState("");
+  const [ownerEmail, setOwnerEmail] = useState("");
   const [ownerPhone, setOwnerPhone] = useState("");
 
   // Check if already configured
@@ -95,6 +95,8 @@ export default function LandingPage() {
         if (parsed.occupation) {
           setSelectedOccupation(parsed.occupation);
           if (parsed.shopName) setShopName(parsed.shopName);
+          if (parsed.ownerEmail) setOwnerEmail(parsed.ownerEmail);
+          if (parsed.ownerPhone) setOwnerPhone(parsed.ownerPhone);
         }
       } catch (e) {}
     }
@@ -110,8 +112,10 @@ export default function LandingPage() {
     const profile = {
       shopName: shopName.trim() || `${selectedOccupation.toUpperCase()} Store`,
       occupation: selectedOccupation,
-      ownerPhone: ownerPhone.trim() || "",
+      ownerEmail: ownerEmail.trim() || "owner@dukaandiary.com",
+      ownerPhone: ownerPhone.trim() || "+91 9876543210",
       loggedInAt: new Date().toISOString(),
+      lockedOccupation: true,
     };
     localStorage.setItem("dukaan_user_profile", JSON.stringify(profile));
     setAuthModalOpen(false);
@@ -122,7 +126,10 @@ export default function LandingPage() {
     const profile = {
       shopName: "Master Tailors Demo",
       occupation: "tailor",
+      ownerEmail: "owner@dukaandiary.com",
+      ownerPhone: "+91 9876543210",
       loggedInAt: new Date().toISOString(),
+      lockedOccupation: true,
     };
     localStorage.setItem("dukaan_user_profile", JSON.stringify(profile));
     router.push("/dashboard?occupation=tailor");
@@ -360,7 +367,7 @@ export default function LandingPage() {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleLaunchDashboard} className="mt-4 space-y-4">
+        <form onSubmit={handleLaunchDashboard} className="mt-4 space-y-3.5">
           {/* Shop Name */}
           <div>
             <label className="text-xs font-semibold text-slate-700 block mb-1">
@@ -375,11 +382,14 @@ export default function LandingPage() {
             />
           </div>
 
-          {/* Select Occupation */}
+          {/* Select Occupation (Permanent Identity) */}
           <div>
-            <label className="text-xs font-semibold text-slate-700 block mb-1.5">
-              Select Your Shop Type
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-slate-700 block">
+                Select Your Profession (Permanent)
+              </label>
+              <span className="text-[10px] text-slate-400 font-medium">Cannot be changed later</span>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {OCCUPATIONS.map((occ) => {
                 const IconComp = occ.icon;
@@ -403,24 +413,45 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Optional Phone */}
+          {/* Owner Email Credentials */}
           <div>
             <label className="text-xs font-semibold text-slate-700 block mb-1">
-              Contact Phone (Optional)
+              Your Email Address (For Order Digest & Pending Due Cards)
+            </label>
+            <Input
+              type="email"
+              placeholder="owner@yourshop.com"
+              value={ownerEmail}
+              onChange={(e) => setOwnerEmail(e.target.value)}
+              required
+            />
+            <p className="text-[10px] text-slate-500 mt-0.5">
+              Order cards with pending balances and delivery deadlines will be emailed directly to you.
+            </p>
+          </div>
+
+          {/* Owner Phone Credentials */}
+          <div>
+            <label className="text-xs font-semibold text-slate-700 block mb-1">
+              Your Mobile / SMS Number (For Due Date Alerts)
             </label>
             <Input
               type="tel"
               placeholder="+91 9876543210"
               value={ownerPhone}
               onChange={(e) => setOwnerPhone(e.target.value)}
+              required
             />
+            <p className="text-[10px] text-slate-500 mt-0.5">
+              SMS reminders will be sent to this number for urgent deadlines.
+            </p>
           </div>
 
           <Button
             type="submit"
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm h-10 shadow mt-2"
           >
-            Enter {selectedOccupation.toUpperCase()} Dashboard
+            Launch {selectedOccupation.toUpperCase()} Ledger
           </Button>
         </form>
       </Dialog>

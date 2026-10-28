@@ -34,7 +34,8 @@ import {
   LogOut,
   Zap,
   Layers,
-  ChevronDown
+  ChevronDown,
+  Phone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -58,6 +59,8 @@ function DashboardContent() {
   // Profile & Occupation
   const [shopType, setShopType] = useState("tailor");
   const [shopName, setShopName] = useState("My Shop");
+  const [ownerEmail, setOwnerEmail] = useState("");
+  const [ownerPhone, setOwnerPhone] = useState("");
 
   // Router & Health State
   const [health, setHealth] = useState({});
@@ -81,7 +84,6 @@ function DashboardContent() {
   const [editForm, setEditForm] = useState({});
 
   // Quick Notification on Flashcard
-  const [notifyEmail, setNotifyEmail] = useState("");
   const [notifyMsg, setNotifyMsg] = useState("");
 
   // Ledger state
@@ -93,19 +95,21 @@ function DashboardContent() {
 
   // Initialize occupation & profile
   useEffect(() => {
-    const qOcc = searchParams.get("occupation");
-    if (qOcc && OCCUPATION_MAP[qOcc]) {
-      setShopType(qOcc);
+    const saved = localStorage.getItem("dukaan_user_profile");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.occupation && OCCUPATION_MAP[parsed.occupation]) {
+          setShopType(parsed.occupation);
+        }
+        if (parsed.shopName) setShopName(parsed.shopName);
+        if (parsed.ownerEmail) setOwnerEmail(parsed.ownerEmail);
+        if (parsed.ownerPhone) setOwnerPhone(parsed.ownerPhone);
+      } catch (e) {}
     } else {
-      const saved = localStorage.getItem("dukaan_user_profile");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed.occupation && OCCUPATION_MAP[parsed.occupation]) {
-            setShopType(parsed.occupation);
-          }
-          if (parsed.shopName) setShopName(parsed.shopName);
-        } catch (e) {}
+      const qOcc = searchParams.get("occupation");
+      if (qOcc && OCCUPATION_MAP[qOcc]) {
+        setShopType(qOcc);
       }
     }
   }, [searchParams]);
@@ -239,6 +243,8 @@ function DashboardContent() {
     formData.append("shop_type", shopType);
     formData.append("mode", routerMode);
     formData.append("auto_save", "true");
+    if (ownerEmail) formData.append("owner_email", ownerEmail);
+    if (ownerPhone) formData.append("owner_phone", ownerPhone);
 
     try {
       const res = await fetch(`${API_BASE}/process-audio`, {
@@ -395,28 +401,28 @@ function DashboardContent() {
     }
   };
 
-  // Send Email Notification on Flashcard
-  const handleSendFlashcardEmail = async (cardItem) => {
-    if (!notifyEmail) {
-      alert("Please enter customer email address.");
-      return;
-    }
+  // Send Email & SMS Notification directly to the Shopkeeper (Owner)
+  const handleSendOwnerAlert = async (cardItem, channel = "both") => {
+    const targetEmail = ownerEmail || "owner@dukaandiary.com";
+    const targetPhone = ownerPhone || "+91 9876543210";
+
     try {
       const res = await fetch(`${API_BASE}/notify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           card: cardItem,
-          email: notifyEmail,
+          owner_email: channel !== "sms" ? targetEmail : null,
+          owner_phone: channel !== "email" ? targetPhone : null,
           telegram: false,
         }),
       });
       if (res.ok) {
-        setNotifyMsg(`Bill emailed to ${notifyEmail}`);
-        setTimeout(() => setNotifyMsg(""), 4000);
+        setNotifyMsg(`Alert card sent to your email (${targetEmail}) & SMS (${targetPhone})!`);
+        setTimeout(() => setNotifyMsg(""), 5000);
       }
     } catch (err) {
-      alert("Email dispatch error: " + err.message);
+      alert("Alert dispatch error: " + err.message);
     }
   };
 
@@ -462,27 +468,19 @@ function DashboardContent() {
               </div>
               <div>
                 <h1 className="text-sm font-bold text-slate-900 leading-none">Dukaan Diary</h1>
-                <p className="text-[11px] text-slate-500 font-medium mt-0.5">{shopName}</p>
+                <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                  {shopName} {ownerEmail ? `• ${ownerEmail}` : ""}
+                </p>
               </div>
             </div>
 
-            {/* Profession Dropdown Switcher */}
-            <div className="flex items-center gap-1.5 bg-slate-100/80 px-2.5 py-1 rounded-lg border border-slate-200">
+            {/* Profession Locked Badge (Non-editable, fixed from signup) */}
+            <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
               <CurrentIcon className="w-3.5 h-3.5 text-indigo-600" />
-              <select
-                value={shopType}
-                onChange={(e) => {
-                  setShopType(e.target.value);
-                  setActiveFlashcard(null);
-                }}
-                className="bg-transparent text-xs font-semibold text-slate-800 border-0 focus:outline-none cursor-pointer"
-              >
-                {Object.values(OCCUPATION_MAP).map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
+              <span className="text-xs font-bold text-slate-800">{OCCUPATION_MAP[shopType]?.label}</span>
+              <span className="text-[9px] uppercase tracking-wider font-bold bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-mono ml-1">
+                LOCKED
+              </span>
             </div>
           </div>
 
@@ -1038,29 +1036,43 @@ function DashboardContent() {
                     </div>
                   )}
 
-                  {/* Instant Customer Email Billing */}
-                  <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-2">
-                    <div className="relative flex-1 w-full">
-                      <Mail className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
-                      <Input
-                        type="email"
-                        placeholder="customer@email.com for instant bill"
-                        value={notifyEmail}
-                        onChange={(e) => setNotifyEmail(e.target.value)}
-                        className="pl-8 text-xs h-8"
-                      />
+                  {/* Shopkeeper Owner Alert & SMS Section (Sent to defined credentials) */}
+                  <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2.5">
+                    <div className="text-left w-full sm:w-auto">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                        Your Alert Credentials
+                      </span>
+                      <p className="text-xs font-semibold text-slate-700 flex items-center gap-2 mt-0.5">
+                        <Mail className="w-3 h-3 text-indigo-500" /> {ownerEmail || "owner@dukaandiary.com"}
+                        <span className="text-slate-300">&bull;</span>
+                        <Phone className="w-3 h-3 text-indigo-500" /> {ownerPhone || "+91 9876543210"}
+                      </p>
                     </div>
-                    <Button
-                      size="sm"
-                      onClick={() => handleSendFlashcardEmail(activeFlashcard)}
-                      className="w-full sm:w-auto h-8 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700"
-                    >
-                      <Send className="w-3 h-3 mr-1" /> Email Bill
-                    </Button>
+
+                    <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                      <Button
+                        size="sm"
+                        onClick={() => handleSendOwnerAlert(activeFlashcard, "email")}
+                        className="flex-1 sm:flex-initial h-8 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
+                      >
+                        <Mail className="w-3 h-3 mr-1" /> Email Me Card
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSendOwnerAlert(activeFlashcard, "sms")}
+                        className="flex-1 sm:flex-initial h-8 text-xs font-semibold border-slate-300 hover:bg-slate-50 text-slate-700"
+                      >
+                        <Phone className="w-3 h-3 mr-1" /> SMS Alert
+                      </Button>
+                    </div>
                   </div>
 
                   {notifyMsg && (
-                    <p className="mt-2 text-xs text-emerald-600 font-semibold">{notifyMsg}</p>
+                    <div className="mt-2.5 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs font-semibold flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                      <span>{notifyMsg}</span>
+                    </div>
                   )}
                 </div>
               )}

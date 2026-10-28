@@ -13,7 +13,12 @@ from router import Router
 from backends.local import LocalBackend
 from backends.cloud import CloudBackend
 from packs import ShopType, get_card_model, validate_card, needs_attention, balance_due
-from notifications import send_customer_email, send_telegram_alert
+from notifications import (
+    send_customer_email,
+    send_telegram_alert,
+    send_owner_order_card,
+    send_owner_sms,
+)
 
 # Initialize Database
 db.init_db()
@@ -105,6 +110,8 @@ async def process_audio(
     shop_type: str = Form("tailor"),
     mode: Optional[str] = Form(None),
     auto_save: bool = Form(True),
+    owner_email: Optional[str] = Form(None),
+    owner_phone: Optional[str] = Form(None),
     customer_email: Optional[str] = Form(None),
     customer_phone: Optional[str] = Form(None),
     send_email: bool = Form(False),
@@ -145,9 +152,18 @@ async def process_audio(
             )
             card_dict["id"] = card_id
 
+            # Dispatch owner notifications if credentials provided
+            if owner_email:
+                email_res = send_owner_order_card(owner_email, card_dict, shop_name=config.PROJECT_NAME)
+                notifications_sent["owner_email"] = email_res
+
+            if owner_phone:
+                sms_res = send_owner_sms(owner_phone, card_dict, shop_name=config.PROJECT_NAME)
+                notifications_sent["owner_sms"] = sms_res
+
             if send_email and customer_email:
                 email_res = send_customer_email(customer_email, card_dict, shop_name=config.PROJECT_NAME)
-                notifications_sent["email"] = email_res
+                notifications_sent["customer_email"] = email_res
 
             if send_telegram:
                 msg = f"<b>New {st.value.capitalize()} Order #{card_id}</b>\n" \
@@ -368,16 +384,21 @@ def get_latest_customer_card(person_name: str, shop_type: Optional[str] = Query(
 
 class NotificationRequest(BaseModel):
     card: Dict[str, Any]
+    owner_email: Optional[str] = None
+    owner_phone: Optional[str] = None
     email: Optional[str] = None
-    telegram: bool = True
+    telegram: bool = False
 
 
 @app.post("/notify")
 def trigger_notification(req: NotificationRequest):
     results = {}
-    if req.email:
-        results["email"] = send_customer_email(req.email, req.card)
+    target_email = req.owner_email or req.email
+    if target_email:
+        results["email"] = send_owner_order_card(target_email, req.card, shop_name=config.PROJECT_NAME)
+    if req.owner_phone:
+        results["sms"] = send_owner_sms(req.owner_phone, req.card, shop_name=config.PROJECT_NAME)
     if req.telegram:
-        msg = f"<b>Order Update</b>: {req.card.get('person')} - {req.card.get('item')} (Balance: ₹{req.card.get('balance_due')})"
+        msg = f"<b>Order Alert</b>: {req.card.get('person')} - {req.card.get('item')} (Balance: ₹{req.card.get('balance_due')}, Due: {req.card.get('due_date')})"
         results["telegram"] = send_telegram_alert(msg)
     return results
