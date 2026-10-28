@@ -59,3 +59,4 @@
 - **Tailor:** `Ramesh Kumar pant and shirt, chest 38, waist 32, 5 din mein, advance 500, total 1500`
 - **Bakery:** `Happy Birthday Aryan chocolate cake, 1.5 kg, advance 200, total 600, due in 2 days`
 - **Medical:** `Paracetamol 500mg, batch B204, expiry 12/2027, 50 units, amount 250`
+

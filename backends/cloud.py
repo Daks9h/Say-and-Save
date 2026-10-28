@@ -20,6 +20,7 @@ from packs import (
     validate_card,
 )
 from prompts import TRANSCRIPTION_PROMPT, EXTRACTION_SYSTEM_PROMPT
+from audio_utils import normalize_to_pcm16_wav
 
 load_dotenv()
 
@@ -40,8 +41,16 @@ class CloudBackend(Backend):
 
         # Rule L3: Only strictly required audio prep runs first
         with TimingContext("audio_prep", timings):
-            with open(wav_path, "rb") as f:
-                audio_bytes = f.read()
+            normalized_path = normalize_to_pcm16_wav(wav_path)
+            try:
+                with open(normalized_path, "rb") as f:
+                    audio_bytes = f.read()
+            finally:
+                if normalized_path != wav_path and os.path.exists(normalized_path):
+                    try:
+                        os.remove(normalized_path)
+                    except Exception:
+                        pass
 
         # Rule L1: Send request immediately with persistent client
         with TimingContext("transcribe_api", timings):

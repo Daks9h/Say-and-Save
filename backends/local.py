@@ -21,6 +21,7 @@ from packs import (
     validate_card,
 )
 from prompts import TRANSCRIPTION_PROMPT, EXTRACTION_SYSTEM_PROMPT
+from audio_utils import normalize_to_pcm16_wav
 
 
 class LocalBackend(Backend):
@@ -51,35 +52,22 @@ class LocalBackend(Backend):
     def _prepare_audio(self, wav_path: str, timings: Dict[str, float]) -> str:
         """Validates duration (<30s) and normalizes to 16kHz mono 16-bit PCM if needed."""
         with TimingContext("audio_prep", timings):
-            info = sf.info(wav_path)
-            if info.duration > 30.0:
-                raise ValueError(f"Audio duration ({info.duration:.1f}s) exceeds maximum allowed 30 seconds.")
+            normalized_path = normalize_to_pcm16_wav(wav_path)
+            try:
+                info = sf.info(normalized_path)
+                if info.duration > 30.0:
+                    raise ValueError(f"Audio duration ({info.duration:.1f}s) exceeds maximum allowed 30 seconds.")
 
-            # Check if audio already matches requirement (16kHz mono PCM_16)
-            needs_conversion = (info.samplerate != 16000 or info.channels != 1 or info.subtype != "PCM_16")
-
-            if config.AUDIO_NORMALIZE and needs_conversion:
-                data, sr = sf.read(wav_path)
-                # Convert stereo to mono
-                if len(data.shape) > 1 and data.shape[1] > 1:
-                    data = data.mean(axis=1)
-
-                # Resample to 16000 Hz if needed
-                if sr != 16000:
-                    num_samples = int(len(data) * 16000 / sr)
-                    indices = np.linspace(0, len(data) - 1, num_samples)
-                    data = np.interp(indices, np.arange(len(data)), data)
-
-                # Convert to 16-bit PCM WAV in memory
-                import io
-                buf = io.BytesIO()
-                sf.write(buf, data, 16000, format="WAV", subtype="PCM_16")
-                audio_bytes = buf.getvalue()
-            else:
-                with open(wav_path, "rb") as f:
+                with open(normalized_path, "rb") as f:
                     audio_bytes = f.read()
 
-            return base64.b64encode(audio_bytes).decode("utf-8")
+                return base64.b64encode(audio_bytes).decode("utf-8")
+            finally:
+                if normalized_path != wav_path and os.path.exists(normalized_path):
+                    try:
+                        os.remove(normalized_path)
+                    except Exception:
+                        pass
 
     def transcribe(self, wav_path: str) -> Tuple[str, Dict[str, float]]:
         """Transcribes audio using local Ollama model (gemma4:e2b)."""

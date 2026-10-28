@@ -134,16 +134,30 @@ export default function DukaanDiary() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      
+      let mimeType = "";
+      if (typeof MediaRecorder.isTypeSupported === "function") {
+        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+          mimeType = "audio/webm;codecs=opus";
+        } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+          mimeType = "audio/webm";
+        } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+          mimeType = "audio/mp4";
+        }
+      }
+
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
       const chunks = [];
 
       recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data);
+        if (e.data && e.data.size > 0) chunks.push(e.data);
       };
 
       recorder.onstop = async () => {
-        const audioBlob = new Blob(chunks, { type: "audio/wav" });
-        await handleAudioUpload(audioBlob, "recording.wav");
+        const actualType = mimeType || recorder.mimeType || "audio/webm";
+        const audioBlob = new Blob(chunks, { type: actualType });
+        const ext = actualType.includes("webm") ? "webm" : actualType.includes("mp4") ? "mp4" : "wav";
+        await handleAudioUpload(audioBlob, `recording.${ext}`);
         stream.getTracks().forEach((track) => track.stop());
       };
 
