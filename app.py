@@ -51,6 +51,16 @@ app.add_middleware(
 )
 
 
+@app.get("/")
+def root():
+    return {
+        "project": config.PROJECT_NAME,
+        "status": "online",
+        "health": "/health",
+        "docs": "/docs",
+    }
+
+
 @app.get("/health")
 def health():
     return {
@@ -408,3 +418,10 @@ def trigger_notification(req: NotificationRequest):
         msg = req.message or f"<b>Order Alert</b>: {card_payload.get('person')} - {card_payload.get('item')} (Balance: ₹{card_payload.get('balance_due')}, Due: {card_payload.get('due_date')})"
         results["telegram"] = send_telegram_alert(msg)
     return results
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("app:app", host="0.0.0.0", port=port, reload=False)
+

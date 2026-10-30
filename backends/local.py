@@ -43,7 +43,7 @@ class LocalBackend(Backend):
                     "keep_alive": "60m",
                     "options": {"temperature": 0.0}
                 },
-                timeout=30
+                timeout=1.5
             )
             self._is_warmed_up = True
         except Exception:

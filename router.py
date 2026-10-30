@@ -50,6 +50,17 @@ class Router:
         self._probe_thread: Optional[threading.Thread] = None
         self._stop_probes = threading.Event()
 
+    def get_cloud(self) -> Optional[CloudBackend]:
+        """Lazily initialize or return cloud backend if GOOGLE_API_KEY is available."""
+        if self.cloud is None:
+            key = os.getenv("GOOGLE_API_KEY") or config.GOOGLE_API_KEY
+            if key:
+                try:
+                    self.cloud = CloudBackend(api_key=key)
+                except Exception as e:
+                    print(f"Lazy CloudBackend init warning: {e}")
+        return self.cloud
+
     def set_accuracy_gate(self, backend: str, passed: bool):
         """Sets accuracy gate for auto-routing eligibility."""
         self.accuracy_gate_passed[backend] = passed
@@ -58,7 +69,8 @@ class Router:
         """Checks if cloud backend is eligible for automatic routing."""
         if not config.CLOUD_CONSENT:
             return False
-        if not self.cloud or not self.cloud.api_key:
+        cloud = self.get_cloud()
+        if not cloud or not cloud.api_key:
             return False
         if time.time() < self.cloud_cooldown_until:
             return False
@@ -174,10 +186,11 @@ class Router:
 
         try:
             # 1. Attempt preferred backend (Fast single-call path for Cloud Gemini)
-            if preferred == "cloud" and self.cloud:
+            cloud_inst = self.get_cloud()
+            if preferred == "cloud" and cloud_inst:
                 try:
                     t0 = time.perf_counter()
-                    card, transcript, e_timings, warnings = self.cloud.process_audio(wav_path, shop_type, today)
+                    card, transcript, e_timings, warnings = cloud_inst.process_audio(wav_path, shop_type, today)
                     total_lat = (time.perf_counter() - t0) * 1000
                     timings = {**e_timings, "total_ms": total_lat}
                     self.record_success("cloud", total_lat)
